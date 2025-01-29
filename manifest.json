@@ -1,11 +1,10 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
-	"version": "1.0.0",
+	"id": "table-check",
+	"name": "Table Check",
+	"version": "0.0.1",
 	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"description": "Allows to add html checkboxes to tables and makes them clickable.",
+	"author": "anareaty",
+	"authorUrl": "https://github.com/anareaty",
 	"isDesktopOnly": false
 }
