@@ -2,6 +2,8 @@
 
 This plugin allows you to quickly add HTML checkboxes to your notes and makes them clickable. 
 
+![image](html-check.png)
+
 ## Why use HTML checkboxes?
 
 The main reason you may want to use HTML checkboxes instead of Markdown checkboxes is that you can put them into Markdown tables. You can also place them anywhere in the note, for example add several checkboxes in the row. Also all of your Markdown stays valid, and even if you turn the plugin off, all created checkboxes would still be visible (just not clickable).
