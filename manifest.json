@@ -1,10 +1,10 @@
 {
-	"id": "table-check",
-	"name": "Table Check",
-	"version": "0.0.1",
+	"id": "html-checkboxes",
+	"name": "HTML checkboxes",
+	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Allows to add html checkboxes to tables and makes them clickable.",
-	"author": "anareaty",
+	"description": "Allows to quickly add HTML checkboxes to your notes and makes them clickable.",
+	"author": "Anareaty",
 	"authorUrl": "https://github.com/anareaty",
 	"isDesktopOnly": false
 }

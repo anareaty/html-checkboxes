@@ -1,134 +1,291 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { Editor, Plugin, TFile, Menu } from 'obsidian';
 
-// Remember to rename these classes and interfaces!
 
-interface MyPluginSettings {
-	mySetting: string;
-}
-
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
-}
 
 export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+
 
 	async onload() {
-		await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
+		/* Add menu item to create checkbox */
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
+		this.registerEvent(this.app.workspace.on('editor-menu', (menu, editor, view) => {
+			menu.addItem((item) => {
+				item
+				  .setTitle("Add HTML checkbox")
+				  .setIcon("check-square-2")
+				  .onClick(async () => {
+					this.addCheckbox(editor)
+				});
+			});
+		}));
 
-		// This adds a simple command that can be triggered anywhere
+
+
 		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
+			id: "add-html-checkbox",
+			name: "Add HTML checkbox",
+			editorCallback: async (editor, view) => {
+				this.addCheckbox(editor)
 			}
 		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
+
+
+
+
+
+		/* Add listener to make checkbox clickable */
+
+		this.registerDomEvent(window, 'click', async (e: MouseEvent) => {
+			let target = e.target as HTMLElement
+
+			
+
+			if (target.localName == "input"  && 
+				(target as HTMLInputElement).type == "checkbox" &&
+				target.id
+			) {
+				
+				e.preventDefault()
+				let file = this.app.workspace.getActiveFile() as TFile
+
+				/* Check if checkbox is inside embedded file */
+				let embedWrapper = target.closest(".internal-embed")
+
+				if (embedWrapper) {
+					let embedSrc = embedWrapper.getAttribute("src") || ""
+					file = this.app.metadataCache.getFirstLinkpathDest(embedSrc, "") as TFile
+				} 
+
+				let content = await this.app.vault.cachedRead(file)
+
+				let id = target.id
+				let checkboxRE = new RegExp("<input[^>]*?id=\"" + id + "\"[^>]*?>")
+
+				if (file.extension == "canvas") {
+					checkboxRE = new RegExp("<input[^>]*?id=\\\\\"" + id + "\\\\\"[^>]*?>")
+				}
+
+				let checkboxMatch = content.match(checkboxRE)
+
+				if (checkboxMatch) {
+					let checkboxString = checkboxMatch[0]
+					let dataTaskMatch = checkboxString.match(/data-task="."/)
+
+					let newCheckboxString = checkboxString
+
+					if ((target as HTMLInputElement).checked) {
+						newCheckboxString = newCheckboxString.replace(">", " checked>") 
+					} else {
+						newCheckboxString = newCheckboxString.replace(" checked>", ">").replace(" >", ">")
+
+						if (dataTaskMatch) {
+							newCheckboxString = newCheckboxString.replace(dataTaskMatch[0], "")
+						}
+					}
+					
+					let newContent = content.replace(checkboxString, newCheckboxString)
+					await this.app.vault.modify(file, newContent)
+
+					let inCanvas = target.closest(".canvas-node-content")
+
+					if (file.extension != "canvas" && inCanvas) {
+						//@ts-ignore
+						await this.app.workspace.getMostRecentLeaf().rebuildView()
 					}
 
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
+					
 				}
 			}
 		});
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
 
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
 
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
+
+
+		/* Add menu for alternative checkboxes */
+
+		this.registerDomEvent(window, "mouseup", (e: MouseEvent) => {
+			if (e.button == 2) {
+				let target = e.target as HTMLElement
+				if (target.localName == "input"  && 
+					(target as HTMLInputElement).type == "checkbox" && 
+					target.id
+				) {
+
+					const menu = new Menu();
+
+					menu.addItem((item) =>
+						item
+						.setIcon("square")
+						.onClick(() => {
+							this.setStatus(" ", target)
+						})
+					);
+
+					menu.addItem((item) =>
+						item
+						.setIcon("square-check")
+						.setTitle("x")
+						.onClick(() => {
+							this.setStatus("x", target)
+						})
+					);
+
+					menu.addItem((item) =>
+						item
+						.setIcon("square-minus")
+						.setTitle("-")
+						.onClick(() => {
+							this.setStatus("-", target)
+						})
+					);
+
+					menu.addItem((item) =>
+						item
+						.setIcon("x-square")
+						.setTitle("~")
+						.onClick(() => {
+							this.setStatus("~", target)
+						})
+					);
+
+					menu.addItem((item) =>
+						item
+						.setIcon("square-slash")
+						.setTitle("/")
+						.onClick(() => {
+							this.setStatus("/", target)
+						})
+					);
+
+					menu.showAtMouseEvent(e as MouseEvent);
+					//@ts-ignore
+					menu.dom.classList.add("checkbox-menu");
+
+				}
+			}
+		})
 	}
 
-	onunload() {
+	onunload() {}
 
+
+
+
+
+
+
+
+
+
+	async addCheckbox(editor: Editor) {
+		const generateId: any = (content: string) => {
+			let id = "hc-" + (Math.floor(Math.random() * 999) + 1);
+			let match = content.match("id=\"" + id + "\"")
+			if (match) {
+				return generateId(content)
+			} else {
+				return id
+			}
+		}
+		
+		let lastLine = editor.lastLine()
+		let lastLineLength = editor.getLine(lastLine).length
+		let editorContent = editor.getRange({line:0, ch: 0}, {line:lastLine, ch: lastLineLength})
+		let id = generateId(editorContent)
+		let checkbox = '<input id="' + id + '" type="checkbox">'
+		editor.replaceSelection(checkbox)
 	}
 
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+
+
+
+
+
+
+	async setStatus(status: string, target: HTMLElement) {
+		let file = this.app.workspace.getActiveFile() as TFile
+
+		/* Check if checkbox is inside embedded file */
+		let embedWrapper = target.closest(".internal-embed")
+
+		if (embedWrapper) {
+			let embedSrc = embedWrapper.getAttribute("src") || ""
+			file = this.app.metadataCache.getFirstLinkpathDest(embedSrc, "") as TFile
+		}
+
+		let content = await this.app.vault.cachedRead(file)
+
+		let id = target.id
+		let checkboxRE = new RegExp("<input[^>]*?id=\"" + id + "\"[^>]*?>")
+
+		if (file.extension == "canvas") {
+			checkboxRE = new RegExp("<input[^>]*?id=\\\\\"" + id + "\\\\\"[^>]*?>")
+		}
+
+
+		let checkboxString = content.match(checkboxRE)![0]
+		let newCheckboxString = checkboxString
+		let statusRe = new RegExp("data-task=\"" + status + "\"")
+
+		let dataTaskMatch = checkboxString.match(/data-task="."/)
+
+
+		if (file.extension == "canvas") {
+			dataTaskMatch = checkboxString.match(/data-task=\\".\\"/)
+		}
+
+
+
+
+		let dataTaskMatchFirst = ""
+		if (dataTaskMatch) {
+			dataTaskMatchFirst = dataTaskMatch[0]
+		}
+
+		let statusMatch = checkboxString.match(statusRe)
+
+
+		let dataTaskString = "data-task=\"" + status + "\""
+
+		if (file.extension == "canvas") {
+			dataTaskString = 'data-task=\\\"' + status + '\\\"'
+		}
+
+		if (status == " ") {
+			newCheckboxString = newCheckboxString
+			.replace(dataTaskMatchFirst, "")
+			.replace(" checked>", ">").replace(" >", ">")
+		} else {
+
+			if (dataTaskMatch && !statusMatch) {
+				newCheckboxString = newCheckboxString.replace(dataTaskMatchFirst, dataTaskString)
+			}
+
+			if (!dataTaskMatch && (target as HTMLInputElement).checked) {
+				newCheckboxString = newCheckboxString.replace("checked", dataTaskString + " checked")
+			}
+	
+			if (!dataTaskMatch && !(target as HTMLInputElement).checked) {
+				newCheckboxString = newCheckboxString.replace(">", " " + dataTaskString + " checked>")
+			}
+		}
+
+		let newContent = content.replace(checkboxString, newCheckboxString)
+		await this.app.vault.modify(file, newContent)
 	}
 
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
+
+
+	
+
+
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
 
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
 
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-}
 
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
 
-	constructor(app: App, plugin: MyPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
 
-	display(): void {
-		const {containerEl} = this;
 
-		containerEl.empty();
-
-		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
-	}
-}
