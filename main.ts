@@ -1,8 +1,8 @@
-import { Editor, Plugin, TFile, Menu } from 'obsidian';
+import { Editor, Plugin, TFile, Menu, WorkspaceLeaf } from 'obsidian';
 
 
 
-export default class MyPlugin extends Plugin {
+export default class HTMLCheckboxPlugin extends Plugin {
 
 
 	async onload() {
@@ -19,8 +19,6 @@ export default class MyPlugin extends Plugin {
 				});
 			});
 		}));
-
-
 
 		this.addCommand({
 			id: "add-html-checkbox",
@@ -39,63 +37,64 @@ export default class MyPlugin extends Plugin {
 		this.registerDomEvent(window, 'click', async (e: MouseEvent) => {
 			let target = e.target as HTMLElement
 
-			
-
 			if (target.localName == "input"  && 
 				(target as HTMLInputElement).type == "checkbox" &&
 				target.id
 			) {
 				
 				e.preventDefault()
-				let file = this.app.workspace.getActiveFile() as TFile
+				let file = this.app.workspace.getActiveFile()
 
 				/* Check if checkbox is inside embedded file */
 				let embedWrapper = target.closest(".internal-embed")
 
 				if (embedWrapper) {
 					let embedSrc = embedWrapper.getAttribute("src") || ""
-					file = this.app.metadataCache.getFirstLinkpathDest(embedSrc, "") as TFile
+					file = this.app.metadataCache.getFirstLinkpathDest(embedSrc, "")
 				} 
 
-				let content = await this.app.vault.cachedRead(file)
+				if (file instanceof TFile) {
+					let content = await this.app.vault.cachedRead(file)
 
-				let id = target.id
-				let checkboxRE = new RegExp("<input[^>]*?id=\"" + id + "\"[^>]*?>")
+					let id = target.id
+					let checkboxRE = new RegExp("<input[^>]*?id=\"" + id + "\"[^>]*?>")
 
-				if (file.extension == "canvas") {
-					checkboxRE = new RegExp("<input[^>]*?id=\\\\\"" + id + "\\\\\"[^>]*?>")
-				}
+					if (file.extension == "canvas") {
+						checkboxRE = new RegExp("<input[^>]*?id=\\\\\"" + id + "\\\\\"[^>]*?>")
+					}
 
-				let checkboxMatch = content.match(checkboxRE)
+					let checkboxMatch = content.match(checkboxRE)
 
-				if (checkboxMatch) {
-					let checkboxString = checkboxMatch[0]
-					let dataTaskMatch = checkboxString.match(/data-task="."/)
+					if (checkboxMatch) {
+						let checkboxString = checkboxMatch[0]
+						let dataTaskMatch = checkboxString.match(/data-task="."/)
 
-					let newCheckboxString = checkboxString
+						let newCheckboxString = checkboxString
 
-					if ((target as HTMLInputElement).checked) {
-						newCheckboxString = newCheckboxString.replace(">", " checked>") 
-					} else {
-						newCheckboxString = newCheckboxString.replace(" checked>", ">").replace(" >", ">")
+						if ((target as HTMLInputElement).checked) {
+							newCheckboxString = newCheckboxString.replace(">", " checked>") 
+						} else {
+							newCheckboxString = newCheckboxString.replace(" checked>", ">").replace(" >", ">")
 
-						if (dataTaskMatch) {
-							newCheckboxString = newCheckboxString.replace(dataTaskMatch[0], "")
+							if (dataTaskMatch) {
+								newCheckboxString = newCheckboxString.replace(dataTaskMatch[0], "")
+							}
+						}
+						
+						let newContent = content.replace(checkboxString, newCheckboxString)
+						await this.app.vault.modify(file, newContent)
+
+						let inCanvas = target.closest(".canvas-node-content")
+
+						if (file.extension != "canvas" && inCanvas) {
+							let leaf = this.app.workspace.getMostRecentLeaf()
+							if (leaf instanceof WorkspaceLeaf) {
+								//@ts-ignore
+								await leaf.rebuildView()
+							}
 						}
 					}
-					
-					let newContent = content.replace(checkboxString, newCheckboxString)
-					await this.app.vault.modify(file, newContent)
-
-					let inCanvas = target.closest(".canvas-node-content")
-
-					if (file.extension != "canvas" && inCanvas) {
-						//@ts-ignore
-						await this.app.workspace.getMostRecentLeaf().rebuildView()
-					}
-
-					
-				}
+				}	
 			}
 		});
 
@@ -160,9 +159,9 @@ export default class MyPlugin extends Plugin {
 					);
 
 					menu.showAtMouseEvent(e as MouseEvent);
+					console.log(menu)
 					//@ts-ignore
 					menu.dom.classList.add("checkbox-menu");
-
 				}
 			}
 		})
@@ -205,82 +204,69 @@ export default class MyPlugin extends Plugin {
 
 
 	async setStatus(status: string, target: HTMLElement) {
-		let file = this.app.workspace.getActiveFile() as TFile
+		let file = this.app.workspace.getActiveFile()
 
 		/* Check if checkbox is inside embedded file */
 		let embedWrapper = target.closest(".internal-embed")
 
 		if (embedWrapper) {
 			let embedSrc = embedWrapper.getAttribute("src") || ""
-			file = this.app.metadataCache.getFirstLinkpathDest(embedSrc, "") as TFile
+			file = this.app.metadataCache.getFirstLinkpathDest(embedSrc, "")
 		}
 
-		let content = await this.app.vault.cachedRead(file)
+		if (file instanceof TFile) {
+			let content = await this.app.vault.cachedRead(file)
+			let id = target.id
+			let checkboxRE = new RegExp("<input[^>]*?id=\"" + id + "\"[^>]*?>")
 
-		let id = target.id
-		let checkboxRE = new RegExp("<input[^>]*?id=\"" + id + "\"[^>]*?>")
-
-		if (file.extension == "canvas") {
-			checkboxRE = new RegExp("<input[^>]*?id=\\\\\"" + id + "\\\\\"[^>]*?>")
-		}
-
-
-		let checkboxString = content.match(checkboxRE)![0]
-		let newCheckboxString = checkboxString
-		let statusRe = new RegExp("data-task=\"" + status + "\"")
-
-		let dataTaskMatch = checkboxString.match(/data-task="."/)
-
-
-		if (file.extension == "canvas") {
-			dataTaskMatch = checkboxString.match(/data-task=\\".\\"/)
-		}
-
-
-
-
-		let dataTaskMatchFirst = ""
-		if (dataTaskMatch) {
-			dataTaskMatchFirst = dataTaskMatch[0]
-		}
-
-		let statusMatch = checkboxString.match(statusRe)
-
-
-		let dataTaskString = "data-task=\"" + status + "\""
-
-		if (file.extension == "canvas") {
-			dataTaskString = 'data-task=\\\"' + status + '\\\"'
-		}
-
-		if (status == " ") {
-			newCheckboxString = newCheckboxString
-			.replace(dataTaskMatchFirst, "")
-			.replace(" checked>", ">").replace(" >", ">")
-		} else {
-
-			if (dataTaskMatch && !statusMatch) {
-				newCheckboxString = newCheckboxString.replace(dataTaskMatchFirst, dataTaskString)
+			if (file.extension == "canvas") {
+				checkboxRE = new RegExp("<input[^>]*?id=\\\\\"" + id + "\\\\\"[^>]*?>")
 			}
 
-			if (!dataTaskMatch && (target as HTMLInputElement).checked) {
-				newCheckboxString = newCheckboxString.replace("checked", dataTaskString + " checked")
-			}
-	
-			if (!dataTaskMatch && !(target as HTMLInputElement).checked) {
-				newCheckboxString = newCheckboxString.replace(">", " " + dataTaskString + " checked>")
-			}
-		}
+			let checkboxString = content.match(checkboxRE)![0]
+			let newCheckboxString = checkboxString
+			let statusRe = new RegExp("data-task=\"" + status + "\"")
+			let dataTaskMatch = checkboxString.match(/data-task="."/)
 
-		let newContent = content.replace(checkboxString, newCheckboxString)
-		await this.app.vault.modify(file, newContent)
+			if (file.extension == "canvas") {
+				dataTaskMatch = checkboxString.match(/data-task=\\".\\"/)
+			}
+
+			let dataTaskMatchFirst = ""
+			if (dataTaskMatch) {
+				dataTaskMatchFirst = dataTaskMatch[0]
+			}
+
+			let statusMatch = checkboxString.match(statusRe)
+			let dataTaskString = "data-task=\"" + status + "\""
+
+			if (file.extension == "canvas") {
+				dataTaskString = 'data-task=\\\"' + status + '\\\"'
+			}
+
+			if (status == " ") {
+				newCheckboxString = newCheckboxString
+				.replace(dataTaskMatchFirst, "")
+				.replace(" checked>", ">").replace(" >", ">")
+			} else {
+
+				if (dataTaskMatch && !statusMatch) {
+					newCheckboxString = newCheckboxString.replace(dataTaskMatchFirst, dataTaskString)
+				}
+
+				if (!dataTaskMatch && (target as HTMLInputElement).checked) {
+					newCheckboxString = newCheckboxString.replace("checked", dataTaskString + " checked")
+				}
+		
+				if (!dataTaskMatch && !(target as HTMLInputElement).checked) {
+					newCheckboxString = newCheckboxString.replace(">", " " + dataTaskString + " checked>")
+				}
+			}
+
+			let newContent = content.replace(checkboxString, newCheckboxString)
+			await this.app.vault.modify(file, newContent)
+		}
 	}
-
-
-
-	
-
-
 }
 
 
