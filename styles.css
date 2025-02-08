@@ -2,3 +2,14 @@
 body:has(.checkbox-menu) .menu:has([data-section='table']) {
     display: none;
 }
+
+.cm-html-embed > input[type="checkbox"] {
+    top: -0.1em;
+    vertical-align: middle;
+}
+
+.markdown-preview-sizer input[type="checkbox"][id],
+.table-cell-wrapper input[type="checkbox"][id] {
+    position: relative;
+    top: 0.2em;
+}
