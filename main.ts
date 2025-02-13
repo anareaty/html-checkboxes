@@ -104,7 +104,8 @@ export default class HTMLCheckboxPlugin extends Plugin {
 
 		/* Add menu for alternative checkboxes */
 
-		this.registerDomEvent(window, "mousedown", (e: MouseEvent) => {
+
+		this.registerDomEvent(window, "contextmenu", (e: MouseEvent) => {
 			if (e.button == 2) {
 				let target = e.target as HTMLElement
 				if (target.localName == "input"  && 
@@ -165,6 +166,14 @@ export default class HTMLCheckboxPlugin extends Plugin {
 				}
 			}
 		})
+
+
+
+		
+
+
+
+
 	}
 
 	onunload() {}
