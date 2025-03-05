@@ -39,7 +39,7 @@ export default class HTMLCheckboxPlugin extends Plugin {
 
 			if (target.localName == "input"  && 
 				(target as HTMLInputElement).type == "checkbox" &&
-				target.id
+				target.id && target.id.startsWith("hc-")
 			) {
 				
 				e.preventDefault()
@@ -116,7 +116,7 @@ export default class HTMLCheckboxPlugin extends Plugin {
 				let target = e.target as HTMLElement
 				if (target.localName == "input"  && 
 					(target as HTMLInputElement).type == "checkbox" && 
-					target.id
+					target.id && target.id.startsWith("hc-")
 				) {
 
 					const menu = new Menu();
