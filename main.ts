@@ -289,6 +289,8 @@ export default class HTMLCheckboxPlugin extends Plugin {
 	async fixCheckboxIds(editor: Editor, inCanvas?: Element | null | undefined, pasteContent?: string) {
 		let lastLine = editor.lastLine()
 		let lastLineLength = editor.getLine(lastLine).length
+		let startCursor = editor.getCursor("from")
+		let endCursor = editor.getCursor("to")
 		editor.setSelection({line:0, ch: 0}, {line:lastLine, ch: lastLineLength})
 		let editorContent = editor.getSelection()
 		let re = /(id="hc-)([^"]+)(\")/g;
@@ -297,8 +299,6 @@ export default class HTMLCheckboxPlugin extends Plugin {
 		/* In regular notes event triggers after text already pasted, but in canvas - before text pasted, so we need to process content differently. */
 		/* In the paste listener we prevented paste with preventDefault(), so we need to add pasted text to content manually. */
 		if (inCanvas && pasteContent) {
-			let startCursor = editor.getCursor("from")
-			let endCursor = editor.getCursor("to")
 			let startContent = editor.getRange({line:0, ch: 0}, startCursor)
 			let endContent = editor.getRange(endCursor, {line:lastLine, ch: lastLineLength})
 			editorContent = startContent + pasteContent + endContent
