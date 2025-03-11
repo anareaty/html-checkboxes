@@ -289,7 +289,8 @@ export default class HTMLCheckboxPlugin extends Plugin {
 	async fixCheckboxIds(editor: Editor, inCanvas?: Element | null | undefined, pasteContent?: string) {
 		let lastLine = editor.lastLine()
 		let lastLineLength = editor.getLine(lastLine).length
-		let editorContent = editor.getRange({line:0, ch: 0}, {line:lastLine, ch: lastLineLength})
+		editor.setSelection({line:0, ch: 0}, {line:lastLine, ch: lastLineLength})
+		let editorContent = editor.getSelection()
 		let re = /(id="hc-)([^"]+)(\")/g;
 		let cursor = editor.getCursor()
 
