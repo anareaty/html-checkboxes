@@ -1,7 +1,7 @@
 {
 	"id": "html-checkboxes",
 	"name": "HTML checkboxes",
-	"version": "1.1.1",
+	"version": "1.1.2",
 	"minAppVersion": "1.1.0",
 	"description": "Allows to quickly add HTML checkboxes to your notes and makes them clickable.",
 	"author": "Anareaty",
